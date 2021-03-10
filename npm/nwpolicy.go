@@ -123,11 +123,7 @@ func (npMgr *NetworkPolicyManager) AddNetworkPolicy(npObj *networkingv1.NetworkP
 	createCidrsRule("in", npObj.ObjectMeta.Name, npObj.ObjectMeta.Namespace, ingressIPCidrs, ipsMgr)
 	createCidrsRule("out", npObj.ObjectMeta.Name, npObj.ObjectMeta.Namespace, egressIPCidrs, ipsMgr)
 	iptMgr := allNs.iptMgr
-	for _, iptEntry := range iptEntries {
-		if err = iptMgr.Add(iptEntry); err != nil {
-			log.Errorf("Error: failed to apply iptables rule. Rule: %+v", iptEntry)
-		}
-	}
+	iptMgr.AddAll(iptEntries)
 
 	metrics.NumPolicies.Inc()
 	timer.StopAndRecord(metrics.AddPolicyExecTime)
@@ -168,11 +164,7 @@ func (npMgr *NetworkPolicyManager) DeleteNetworkPolicy(npObj *networkingv1.Netwo
 	_, _, _, ingressIPCidrs, egressIPCidrs, iptEntries := translatePolicy(npObj)
 
 	iptMgr := allNs.iptMgr
-	for _, iptEntry := range iptEntries {
-		if err = iptMgr.Delete(iptEntry); err != nil {
-			log.Errorf("Error: failed to apply iptables rule. Rule: %+v", iptEntry)
-		}
-	}
+	iptMgr.DeleteAll(iptEntries)
 
 	removeCidrsRule("in", npObj.ObjectMeta.Name, npObj.ObjectMeta.Namespace, ingressIPCidrs, allNs.ipsMgr)
 	removeCidrsRule("out", npObj.ObjectMeta.Name, npObj.ObjectMeta.Namespace, egressIPCidrs, allNs.ipsMgr)
