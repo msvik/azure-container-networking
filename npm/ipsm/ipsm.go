@@ -4,6 +4,7 @@
 package ipsm
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
@@ -192,7 +193,7 @@ func (ipsMgr *IpsetManager) DeleteFromList(listName string, setName string) erro
 }
 
 // CreateSet creates an ipset.
-func (ipsMgr *IpsetManager) CreateSet(setName string, spec []string) error {
+func (ipsMgr *IpsetManager) CreateSet(setName string, spec []string) *NPMError {
 	timer := metrics.StartNewTimer()
 
 	if _, exists := ipsMgr.SetMap[setName]; exists {
@@ -222,7 +223,7 @@ func (ipsMgr *IpsetManager) CreateSet(setName string, spec []string) error {
 }
 
 // DeleteSet removes a set from ipset.
-func (ipsMgr *IpsetManager) DeleteSet(setName string) error {
+func (ipsMgr *IpsetManager) DeleteSet(setName string) *NPMError {
 	if _, exists := ipsMgr.SetMap[setName]; !exists {
 		metrics.SendErrorLogAndMetric(util.IpsmID, "ipset with name %s not found", setName)
 		return nil
@@ -233,10 +234,7 @@ func (ipsMgr *IpsetManager) DeleteSet(setName string) error {
 		set:           util.GetHashedName(setName),
 	}
 
-	if errCode, err := ipsMgr.Run(entry); err != nil {
-		if errCode == 1 {
-			return nil
-		}
+	if _, err := ipsMgr.Run(entry); err != nil {
 
 		metrics.SendErrorLogAndMetric(util.IpsmID, "Error: failed to delete ipset %s. Entry: %+v", setName, entry)
 		return err
@@ -397,7 +395,7 @@ func (ipsMgr *IpsetManager) Destroy() error {
 }
 
 // Run execute an ipset command to update ipset.
-func (ipsMgr *IpsetManager) Run(entry *ipsEntry) (int, error) {
+func (ipsMgr *IpsetManager) Run(entry *ipsEntry) (int, *NPMError) {
 	cmdName := util.Ipset
 	cmdArgs := append([]string{entry.operationFlag, util.IpsetExistFlag, entry.set}, entry.spec...)
 	cmdArgs = util.DropEmptyFields(cmdArgs)
@@ -409,8 +407,11 @@ func (ipsMgr *IpsetManager) Run(entry *ipsEntry) (int, error) {
 		if errCode > 0 {
 			metrics.SendErrorLogAndMetric(util.IpsmID, "Error: There was an error running command: [%s %v] Stderr: [%v, %s]", cmdName, strings.Join(cmdArgs, " "), err, strings.TrimSuffix(string(msg.Stderr), "\n"))
 		}
+		er := fmt.Errorf("%s", strings.TrimSuffix(string(msg.Stderr), "\n"))
+		npmerr := ConvertToNPMErrorWithEntry(entry.operationFlag, er, append([]string{cmdName}, cmdArgs...))
+		fmt.Println(npmerr)
 
-		return errCode, err
+		return errCode, npmerr
 	}
 
 	return 0, nil
@@ -463,7 +464,7 @@ func (ipsMgr *IpsetManager) Restore(configFile string) error {
 }
 
 // DestroyNpmIpsets destroys only ipsets created by NPM
-func (ipsMgr *IpsetManager) DestroyNpmIpsets() error {
+func (ipsMgr *IpsetManager) DestroyNpmIpsets() *NPMError {
 
 	cmdName := util.Ipset
 	cmdArgs := util.IPsetCheckListFlag
@@ -475,7 +476,9 @@ func (ipsMgr *IpsetManager) DestroyNpmIpsets() error {
 			metrics.SendErrorLogAndMetric(util.IpsmID, "{DestroyNpmIpsets} Error: There was an error running command: [%s] Stderr: [%v, %s]", cmdName, err, strings.TrimSuffix(string(msg.Stderr), "\n"))
 		}
 
-		return err
+		npmerr := ConvertToNPMErrorWithEntry(cmdArgs, err, append([]string{cmdName}, cmdArgs))
+
+		return npmerr
 	}
 	if reply == nil {
 		metrics.SendErrorLogAndMetric(util.IpsmID, "{DestroyNpmIpsets} Received empty string from ipset list while destroying azure-npm ipsets")
