@@ -26,21 +26,6 @@ const (
 	iptablesErrDoesNotExist      int    = 1
 )
 
-var (
-	// IptablesAzureChainList contains list of all NPM chains
-	IptablesAzureChainList = []string{
-		util.IptablesAzureChain,
-		util.IptablesAzureIngressChain,
-		util.IptablesAzureEgressChain,
-		util.IptablesAzureIngressPortChain,
-		util.IptablesAzureIngressFromChain,
-		util.IptablesAzureEgressPortChain,
-		util.IptablesAzureEgressToChain,
-		util.IptablesAzureIngressDropsChain,
-		util.IptablesAzureEgressDropsChain,
-	}
-)
-
 // IptEntry represents an iptables rule.
 type IptEntry struct {
 	Command               string
@@ -183,9 +168,10 @@ func (iptMgr *IptablesManager) UninitNpmChains() error {
 		metrics.SendErrorLogAndMetric(util.IptmID, "Error: failed to add default allow CONNECTED/RELATED rule to AZURE-NPM chain.")
 		return err
 	}
+	iptablesAzureChainList := getAllNpmChains()
 
 	iptMgr.OperationFlag = util.IptablesFlushFlag
-	for _, chain := range IptablesAzureChainList {
+	for _, chain := range iptablesAzureChainList {
 		entry := &IptEntry{
 			Chain: chain,
 		}
@@ -195,7 +181,7 @@ func (iptMgr *IptablesManager) UninitNpmChains() error {
 		}
 	}
 
-	for _, chain := range IptablesAzureChainList {
+	for _, chain := range iptablesAzureChainList {
 		if err := iptMgr.DeleteChain(chain); err != nil {
 			return err
 		}
@@ -261,7 +247,8 @@ func (iptMgr *IptablesManager) Exists(entry *IptEntry) (bool, error) {
 // AddAllChains adds all NPM chains
 func (iptMgr *IptablesManager) AddAllChains() error {
 	// Add all secondary Chains
-	for _, chainToAdd := range IptablesAzureChainList {
+	iptablesAzureChainList := getAllNpmChains()
+	for _, chainToAdd := range iptablesAzureChainList {
 		if err := iptMgr.AddChain(chainToAdd); err != nil {
 			return err
 		}
@@ -637,7 +624,18 @@ func grabIptablesFileLock(f *os.File) error {
 func (iptMgr *IptablesManager) BulkUpdateIPtables(toAddEntries []*IptEntry, toDeleteEntries []*IptEntry) {
 	iptableBuffer := bytes.NewBuffer(nil)
 	if err := iptMgr.SaveIntoBuffer(iptableBuffer); err != nil {
-		metrics.SendErrorLogAndMetric(util.IptmID, "[IPTM] Error: failed to get iptables-save command output with err: %s", err.Error())
+		metrics.SendErrorLogAndMetric(util.IptmID, "[BulkUpdateIPtables] Error: failed to get iptables-save command output with err: %s", err.Error())
 	}
+
+}
+
+func (iptMgr *IptablesManager) parseiptablesBuffer(buffer *bytes.Buffer) (*Iptable, error) {
+	filterTable := NewIptable("filter", buffer)
+
+	if err := filterTable.Validate(); err != nil {
+		metrics.SendErrorLogAndMetric(util.IptmID, "[parseiptablesBuffer] %s", err.Error())
+	}
+
+	return filterTable, nil
 
 }
