@@ -392,7 +392,7 @@ func TestDeleteFromSetWithPodCache(t *testing.T) {
 	var ip = "10.0.2.8"
 	var pod1 = "pod1"
 	if err := ipsMgr.AddToSet(setname, ip, util.IpsetNetHashFlag, pod1); err != nil {
-		t.Errorf("TestDeleteFromSetWithPodCache failed for pod1 @ ipsMgr.AddToSet")
+		t.Errorf("TestDeleteFromSetWithPodCache failed for pod1 @ ipsMgr.AddToSet with err %+v", err)
 	}
 
 	if len(ipsMgr.SetMap[setname].elements) != 1 {
@@ -400,23 +400,23 @@ func TestDeleteFromSetWithPodCache(t *testing.T) {
 	}
 
 	if err := ipsMgr.DeleteFromSet(setname, ip, pod1); err != nil {
-		t.Errorf("TestDeleteFromSetWithPodCache for pod1 failed @ ipsMgr.DeleteFromSet")
+		t.Errorf("TestDeleteFromSetWithPodCache for pod1 failed @ ipsMgr.DeleteFromSet with err %+v", err)
 	}
 
 	// now add the set again and then replace it with pod2
 	var pod2 = "pod2"
 	if err := ipsMgr.AddToSet(setname, ip, util.IpsetNetHashFlag, pod1); err != nil {
-		t.Errorf("TestDeleteFromSetWithPodCache failed for pod1 @ ipsMgr.AddToSet")
+		t.Errorf("TestDeleteFromSetWithPodCache failed for pod1 @ ipsMgr.AddToSet with err %+v", err)
 	}
 
 	// Add Pod2 with same ip (This could happen if AddPod2 is served before DeletePod1)
 	if err := ipsMgr.AddToSet(setname, ip, util.IpsetNetHashFlag, pod2); err != nil {
-		t.Errorf("TestDeleteFromSetWithPodCache failed for pod2 @ ipsMgr.AddToSet")
+		t.Errorf("TestDeleteFromSetWithPodCache failed for pod2 @ ipsMgr.AddToSet with err %+v", err)
 	}
 
 	// Process DeletePod1
 	if err := ipsMgr.DeleteFromSet(setname, ip, pod1); err != nil {
-		t.Errorf("TestDeleteFromSetWithPodCache for pod1 failed @ ipsMgr.DeleteFromSet")
+		t.Errorf("TestDeleteFromSetWithPodCache for pod1 failed @ ipsMgr.DeleteFromSet with err %+v", err)
 	}
 
 	// note the set will stil exist with pod ip
@@ -427,7 +427,7 @@ func TestDeleteFromSetWithPodCache(t *testing.T) {
 
 	// Now cleanup and delete pod2
 	if err := ipsMgr.DeleteFromSet(setname, ip, pod2); err != nil {
-		t.Errorf("TestDeleteFromSetWithPodCache for pod2 failed @ ipsMgr.DeleteFromSet")
+		t.Errorf("TestDeleteFromSetWithPodCache for pod2 failed @ ipsMgr.DeleteFromSet with err %+v", err)
 	}
 
 	if _, exists := ipsMgr.SetMap[setname]; exists {
@@ -448,7 +448,7 @@ func TestClean(t *testing.T) {
 	}()
 
 	if err := ipsMgr.CreateSet("test-set", append([]string{util.IpsetNetHashFlag})); err != nil {
-		t.Errorf("TestClean failed @ ipsMgr.CreateSet")
+		t.Errorf("TestClean failed @ ipsMgr.CreateSet with err %+v", err)
 	}
 
 	if err := ipsMgr.Clean(); err != nil {
@@ -471,7 +471,7 @@ func TestDestroy(t *testing.T) {
 	setName := "test-destroy"
 	testIP := "1.2.3.4"
 	if err := ipsMgr.AddToSet(setName, testIP, util.IpsetNetHashFlag, ""); err != nil {
-		t.Errorf("TestDestroy failed @ ipsMgr.AddToSet")
+		t.Errorf("TestDestroy failed @ ipsMgr.AddToSet with err %+v", err)
 	}
 
 	// Call Destroy and validate. Destroy can only work when no ipset is referenced from iptables.
@@ -483,7 +483,7 @@ func TestDestroy(t *testing.T) {
 		}
 
 		if _, err := ipsMgr.Run(entry); err == nil {
-			t.Errorf("TestDestroy failed @ ipsMgr.Destroy since %s still exist in kernel", setName)
+			t.Errorf("TestDestroy failed @ ipsMgr.Destroy since %s still exist in kernel with err %+v", setName, err)
 		}
 	} else {
 		// Validate ipset entries are gone from flush command when destroy can not happen.
@@ -494,7 +494,7 @@ func TestDestroy(t *testing.T) {
 		}
 
 		if _, err := ipsMgr.Run(entry); err == nil {
-			t.Errorf("TestDestroy failed @ ipsMgr.Destroy since %s still exist in ipset", testIP)
+			t.Errorf("TestDestroy failed @ ipsMgr.Destroy since %s still exist in ipset with err %+v", testIP, err)
 		}
 	}
 }
@@ -517,7 +517,7 @@ func TestRun(t *testing.T) {
 		spec:          append([]string{util.IpsetNetHashFlag}),
 	}
 	if _, err := ipsMgr.Run(entry); err != nil {
-		t.Errorf("TestRun failed @ ipsMgr.Run")
+		t.Errorf("TestRun failed @ ipsMgr.Run with err %+v", err)
 	}
 }
 
