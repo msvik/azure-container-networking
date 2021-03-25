@@ -179,7 +179,6 @@ func (npMgr *NetworkPolicyManager) AddNetworkPolicy(npObj *networkingv1.NetworkP
 	}
 	if err = npMgr.InitAllNsList(); err != nil {
 		metrics.SendErrorLogAndMetric(util.NetpolID, "[AddNetworkPolicy] Error: initializing all-namespace ipset list with err: %v", err)
-		return err
 	}
 	createCidrsRule("in", npObj.ObjectMeta.Name, npObj.ObjectMeta.Namespace, ingressIPCidrs, ipsMgr)
 	createCidrsRule("out", npObj.ObjectMeta.Name, npObj.ObjectMeta.Namespace, egressIPCidrs, ipsMgr)
