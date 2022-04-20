@@ -51,7 +51,7 @@ func GetOSInfo() string {
 }
 
 func GetProcessSupport() error {
-	p := &execClient{}
+	p := NewExecClient()
 	cmd := fmt.Sprintf("ps -p %v -o comm=", os.Getpid())
 	_, err := p.ExecuteCommand(cmd)
 	return err
@@ -84,8 +84,7 @@ func (p *execClient) ExecuteCommand(command string) (string, error) {
 	var out bytes.Buffer
 
 	// Create a new context and add a timeout to it
-	const timeoutSeconds = 10
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutSeconds*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), p.Timeout)
 	defer cancel() // The cancel should be deferred so resources are cleaned up
 
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
@@ -101,7 +100,7 @@ func (p *execClient) ExecuteCommand(command string) (string, error) {
 }
 
 func SetOutboundSNAT(subnet string) error {
-	p := execClient{}
+	p := NewExecClient()
 	cmd := fmt.Sprintf("iptables -t nat -A POSTROUTING -m iprange ! --dst-range 168.63.129.16 -m addrtype ! --dst-type local ! -d %v -j MASQUERADE",
 		subnet)
 	_, err := p.ExecuteCommand(cmd)
@@ -119,7 +118,7 @@ func ClearNetworkConfiguration() (bool, error) {
 }
 
 func KillProcessByName(processName string) error {
-	p := &execClient{}
+	p := NewExecClient()
 	cmd := fmt.Sprintf("pkill -f %v", processName)
 	_, err := p.ExecuteCommand(cmd)
 	return err
@@ -150,7 +149,7 @@ func GetOSDetails() (map[string]string, error) {
 }
 
 func GetProcessNameByID(pidstr string) (string, error) {
-	p := &execClient{}
+	p := NewExecClient()
 	pidstr = strings.Trim(pidstr, "\n")
 	cmd := fmt.Sprintf("ps -p %s -o comm=", pidstr)
 	out, err := p.ExecuteCommand(cmd)
@@ -166,7 +165,7 @@ func GetProcessNameByID(pidstr string) (string, error) {
 }
 
 func PrintDependencyPackageDetails() {
-	p := &execClient{}
+	p := NewExecClient()
 	out, err := p.ExecuteCommand("iptables --version")
 	out = strings.TrimSuffix(out, "\n")
 	log.Printf("[cni-net] iptable version:%s, err:%v", out, err)
