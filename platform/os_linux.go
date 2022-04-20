@@ -84,7 +84,8 @@ func (p *execClient) ExecuteCommand(command string) (string, error) {
 	var out bytes.Buffer
 
 	// Create a new context and add a timeout to it
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	const timeoutSeconds = 10
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutSeconds*time.Second)
 	defer cancel() // The cancel should be deferred so resources are cleaned up
 
 	cmd := exec.CommandContext(ctx, "sh", "-c", command)
